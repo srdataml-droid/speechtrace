@@ -6,6 +6,7 @@ It never stores recordings or raw transcripts. Temporary audio files are deleted
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import tempfile
 from functools import lru_cache
@@ -112,3 +113,19 @@ async def transcribe(audio: UploadFile = File(...)):
         return result
     finally:
         Path(path).unlink(missing_ok=True)
+
+@app.on_event('startup')
+async def _prewarm_asr():
+    """Background sample transcription to warm weights and validate inference."""
+    if os.getenv('SPEECHTRACE_ASR_PREWARM','1') not in {'1','true','yes'}:
+        return
+    async def check():
+        try:
+            path = str(Path(__file__).resolve().parent / 'data/reference/ideal.wav')
+            result = await asyncio.to_thread(infer, path)
+            logging.getLogger('uvicorn.error').info(
+                'ASR_SMOKE_PASS words=%s duration_s=%s',
+                len(result['transcript'].split()), result['duration_seconds'])
+        except Exception as exc:
+            logging.getLogger('uvicorn.error').exception('ASR_SMOKE_FAILED: %s', type(exc).__name__)
+    asyncio.create_task(check())
