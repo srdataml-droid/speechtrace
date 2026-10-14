@@ -1,0 +1,2 @@
+import {send} from '../lib/shared.js';
+export default function handler(req,res){if(req.method!=='GET')return send(res,405,{error:'Method not allowed'});return send(res,200,{version:'0.7',fast_asr_configured:!!process.env.DEEPGRAM_API_KEY,ai_coach_configured:!!process.env.OPENAI_API_KEY,access_code_required:!!process.env.SPEECHTRACE_ACCESS_CODE});}
