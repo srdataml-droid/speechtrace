@@ -100,11 +100,11 @@ def compare(reference_path: str | None, attempt_path: str | None, transcript: st
         f"**Active audio-level delta:** {metrics['relative_energy_db']:+.1f} dB\n\n"
         f"**Experimental similarity index:** {result['deviation_index']}/100 "
         "(hand-chosen penalty scale, **not** speech quality or confidence).\n\n"
-        + (f"\n\n**Reference-relative rubric (0–100):** Pause {rubric[\x27scores\x27][\x27pause\x27]}, "
-           f"Pace {rubric[\x27scores\x27][\x27relative_pace\x27]}, "
-           f"Recording level {rubric[\x27scores\x27][\x27recording_level\x27]}. "
-           f"**Weighted similarity: {rubric[\x27combined_reference_similarity\x27]}/100.** "
-           "Higher means closer to this one reference, **not** better public speaking.")
+        + (f"\n\n**Reference-relative rubric (0–100):** Pause {rubric['scores']['pause']}, "
+           f"Pace {rubric['scores']['relative_pace']}, "
+           f"Recording level {rubric['scores']['recording_level']}. "
+           f"**Weighted similarity: {rubric['combined_reference_similarity']}/100.** "
+           "Higher means closer to this one reference, **not** better public speaking.\n\n")
         + ("*Transcript supplied for documentation only; no word-level forced alignment is performed.*"
            if transcript else "*No transcript supplied. Compare recordings of the same words for meaningful results.*")
     )
