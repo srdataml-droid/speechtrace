@@ -1,0 +1,46 @@
+{
+  "version": "0.1.0",
+  "source_type": "eSpeak text-to-speech synthetic demonstration; no humans, no public speaker references",
+  "transcript": "Our ideas become stronger when we test them carefully. Evidence matters more than confidence, and practice makes every presentation clearer.",
+  "sample_rate": 16000,
+  "reference": "data/reference/ideal.wav",
+  "examples": [
+    {
+      "id": "extra_pause",
+      "path": "data/flawed/extra_pause.wav",
+      "method": "Insert 2.4 s zero-amplitude audio at a near-zero crossing",
+      "events": [
+        {
+          "type": "extra_pause",
+          "start": 4.253,
+          "end": 6.653
+        }
+      ]
+    },
+    {
+      "id": "rushed",
+      "path": "data/flawed/rushed.wav",
+      "method": "Time-stretch at 1.34x (preserve approximate pitch)",
+      "events": [
+        {
+          "type": "duration_difference",
+          "start": 0,
+          "end": 6.71
+        }
+      ]
+    },
+    {
+      "id": "quiet",
+      "path": "data/flawed/quiet.wav",
+      "method": "Scale amplitude by 0.25 (-12.04 dB)",
+      "events": [
+        {
+          "type": "energy_difference",
+          "start": 0,
+          "end": 8.992
+        }
+      ]
+    }
+  ],
+  "caveat": "This dataset does not meet Track C public-speaking reference/audio quality or speaker-agnostic validation requirements. It demonstrates synthetic controlled deviations only."
+}

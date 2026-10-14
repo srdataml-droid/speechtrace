@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: speechtrace-coach
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements-coach.txt
+    startCommand: GRADIO_SERVER_NAME=0.0.0.0 GRADIO_SERVER_PORT=$PORT GRADIO_SHARE=0 python app.py
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: GRADIO_ANALYTICS_ENABLED
+        value: "False"
+      - key: GRADIO_SHARE
+        value: "0"

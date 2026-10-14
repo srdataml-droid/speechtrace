@@ -1,0 +1,2 @@
+-r requirements-coach.txt
+openai>=1.80,<4

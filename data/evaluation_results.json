@@ -1,0 +1,74 @@
+[
+  {
+    "clip_id": "extra_pause",
+    "predictions": [
+      {
+        "type": "extra_pause",
+        "start": 4.28,
+        "end": 6.7,
+        "observed": 2.42,
+        "reference": 0.02,
+        "delta": 2.4,
+        "explanation": "Low-energy interval lasted 2.42s; its aligned reference region spans 0.02s (difference +2.40s)."
+      }
+    ],
+    "metrics": {
+      "reference_duration_s": 8.99,
+      "attempt_duration_s": 11.39,
+      "duration_ratio": 1.0,
+      "relative_energy_db": 0.0,
+      "extra_pause_count": 1
+    },
+    "temporal_evaluation": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "mean_iou": 0.97
+    }
+  },
+  {
+    "clip_id": "rushed",
+    "predictions": [
+      {
+        "type": "duration_difference",
+        "start": 0.0,
+        "end": 6.71,
+        "observed": 6.71,
+        "reference": 8.99,
+        "delta": 34.0,
+        "explanation": "After adjusting for flagged pauses, the attempt's duration is shorter relative to the reference (estimated speed ratio 1.34x). This is not a word-per-minute measurement."
+      }
+    ],
+    "metrics": {
+      "reference_duration_s": 8.99,
+      "attempt_duration_s": 6.71,
+      "duration_ratio": 1.34,
+      "relative_energy_db": -2.16,
+      "extra_pause_count": 0
+    }
+  },
+  {
+    "clip_id": "quiet",
+    "predictions": [
+      {
+        "type": "energy_difference",
+        "start": 0.0,
+        "end": 8.99,
+        "observed": -10.53,
+        "reference": 0,
+        "delta": -10.53,
+        "explanation": "Median active-speech RMS level differs by -10.5 dB from the reference. Mic distance or recording gain can cause this."
+      }
+    ],
+    "metrics": {
+      "reference_duration_s": 8.99,
+      "attempt_duration_s": 8.99,
+      "duration_ratio": 1.0,
+      "relative_energy_db": -10.53,
+      "extra_pause_count": 0
+    }
+  }
+]
