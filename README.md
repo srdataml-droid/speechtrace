@@ -1,4 +1,4 @@
-# SpeechTrace v0.4 — audio-native English public-speaking coach
+# SpeechTrace — speech rehearsal studio & Track C acoustic comparison
 
 SpeechTrace helps someone practice a short speech with evidence-based feedback on relative energy, pauses, speaking rate, fillers, and alignment to provided presentation materials. The original Track C **same-text comparison** is preserved as a second Gradio tab.
 
@@ -103,3 +103,9 @@ The offline suite tests the shared pipeline, Gradio configuration and callbacks,
 The legacy `docs/technical_report.pdf` describes an earlier Track C build and has not yet been updated to reflect Gradio/API v0.4. Use `docs/IMPLEMENTATION_PHASES.md` and `docs/VERIFICATION.md` for current status.
 
 This software was drafted with AI assistance and must be verified by the maintainer before a hackathon submission. See `RESEARCH_DECISIONS.md`, `SUBMISSION_CHECKLIST.md` and `docs/DATASET_CARD.md` for provenance and more limitations.
+
+## Track C enhanced stress spectrum (October 14, 2026)
+
+The controlled synthetic dataset now includes six graded cases and the three original cases. [Open the spectrum manifest](data/spectrum/manifest.json), [see the reproducibility guide](docs/TRACK_C_STRESS_SPECTRUM.md), and run `python scripts/evaluate_stress_spectrum.py` for case-by-case detections and timestamp overlap. These synthetic results are **not** evidence of real-speaker scoring accuracy. AI-assisted additions are disclosed in the guide.
+
+**Mobile rehearsal studio:** https://speechtrace-mobile-lab.vercel.app/ — separate from the Gradio reference-versus-candidate analysis required for Track C.

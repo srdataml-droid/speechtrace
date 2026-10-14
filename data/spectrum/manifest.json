@@ -1,0 +1,182 @@
+{
+  "title": "SpeechTrace same-text controlled stress spectrum",
+  "version": "0.2.0",
+  "speaker": "Single synthetic eSpeak voice; NOT real-world speech",
+  "source_type": "synthetic, English",
+  "reference": "data/reference/ideal.wav",
+  "transcript": "Our ideas become stronger when we test them carefully. Evidence matters more than confidence, and practice makes every presentation clearer.",
+  "sample_rate": 16000,
+  "same_text_all_examples": true,
+  "annotation_schema": "events use attempt timeline; whole-recording changes are not point-localized speech flaws",
+  "cases": [
+    {
+      "id": "extra_pause",
+      "path": "data/flawed/extra_pause.wav",
+      "category": "extra_pause",
+      "intensity": "strong",
+      "perturbation": {
+        "inserted_silence_s": 2.4
+      },
+      "events": [
+        {
+          "type": "extra_pause",
+          "start": 4.253,
+          "end": 6.653
+        }
+      ],
+      "label_source": "existing generator"
+    },
+    {
+      "id": "rushed",
+      "path": "data/flawed/rushed.wav",
+      "category": "duration_difference",
+      "intensity": "strong",
+      "perturbation": {
+        "stretch_rate": 1.34
+      },
+      "events": [
+        {
+          "type": "duration_difference",
+          "start": 0,
+          "end": 6.71
+        }
+      ],
+      "label_source": "existing generator"
+    },
+    {
+      "id": "quiet",
+      "path": "data/flawed/quiet.wav",
+      "category": "energy_difference",
+      "intensity": "strong",
+      "perturbation": {
+        "gain": 0.25
+      },
+      "events": [
+        {
+          "type": "energy_difference",
+          "start": 0,
+          "end": 8.992
+        }
+      ],
+      "label_source": "existing generator"
+    },
+    {
+      "id": "pause_045",
+      "path": "data/spectrum/pause_045.wav",
+      "category": "extra_pause",
+      "intensity": "subtle",
+      "perturbation": {
+        "inserted_silence_s": 0.45
+      },
+      "events": [
+        {
+          "type": "extra_pause",
+          "start": 4.141,
+          "end": 4.591
+        }
+      ],
+      "expected_detection": "possible_miss",
+      "label_source": "deterministic signal edit"
+    },
+    {
+      "id": "pause_085",
+      "path": "data/spectrum/pause_085.wav",
+      "category": "extra_pause",
+      "intensity": "medium",
+      "perturbation": {
+        "inserted_silence_s": 0.85
+      },
+      "events": [
+        {
+          "type": "extra_pause",
+          "start": 4.141,
+          "end": 4.991
+        }
+      ],
+      "expected_detection": "candidate_detection",
+      "label_source": "deterministic signal edit"
+    },
+    {
+      "id": "pause_140",
+      "path": "data/spectrum/pause_140.wav",
+      "category": "extra_pause",
+      "intensity": "strong",
+      "perturbation": {
+        "inserted_silence_s": 1.4
+      },
+      "events": [
+        {
+          "type": "extra_pause",
+          "start": 4.141,
+          "end": 5.541
+        }
+      ],
+      "expected_detection": "candidate_detection",
+      "label_source": "deterministic signal edit"
+    },
+    {
+      "id": "gain_085",
+      "path": "data/spectrum/gain_085.wav",
+      "category": "energy_difference",
+      "intensity": "subtle",
+      "perturbation": {
+        "gain": 0.85,
+        "delta_db": -1.41
+      },
+      "events": [
+        {
+          "type": "energy_difference",
+          "start": 0,
+          "end": 8.992
+        }
+      ],
+      "expected_detection": "likely_below_threshold",
+      "label_source": "deterministic signal edit"
+    },
+    {
+      "id": "gain_060",
+      "path": "data/spectrum/gain_060.wav",
+      "category": "energy_difference",
+      "intensity": "medium",
+      "perturbation": {
+        "gain": 0.6,
+        "delta_db": -4.44
+      },
+      "events": [
+        {
+          "type": "energy_difference",
+          "start": 0,
+          "end": 8.992
+        }
+      ],
+      "expected_detection": "likely_below_threshold",
+      "label_source": "deterministic signal edit"
+    },
+    {
+      "id": "gain_040",
+      "path": "data/spectrum/gain_040.wav",
+      "category": "energy_difference",
+      "intensity": "strong",
+      "perturbation": {
+        "gain": 0.4,
+        "delta_db": -7.96
+      },
+      "events": [
+        {
+          "type": "energy_difference",
+          "start": 0,
+          "end": 8.992
+        }
+      ],
+      "expected_detection": "candidate_detection",
+      "label_source": "deterministic signal edit"
+    }
+  ],
+  "limitations": [
+    "Injected alterations are controlled signals, not independently rated rhetorical weaknesses.",
+    "The reference is a synthetic voice and not a licensed recording of an effective public speaker.",
+    "A negative or missed detection can be correct for near-threshold cases; do not equate dataset perturbations with all real-world flaws.",
+    "Extra-pause event labels are exact artificial insertion intervals, not word-aligned audio annotations.",
+    "Gain level changes may reflect microphone placement rather than performance."
+  ]
+}
