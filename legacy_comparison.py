@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from src.analysis import analyze_pair, load_audio, evaluate_intervals
+from src.rubric import score_relative_delivery
 
 ROOT = Path(__file__).resolve().parent
 EXAMPLES_DIR = ROOT / "data"
@@ -87,6 +88,7 @@ def compare(reference_path: str | None, attempt_path: str | None, transcript: st
 
     metrics = result["metrics"]
     events = result["events"]
+    rubric = score_relative_delivery(result)
     transcript = (transcript or "").strip()
     status = "No differences crossed the prototype thresholds." if not events else f"Detected {len(events)} reference-relative difference(s)."
     summary = (
@@ -98,6 +100,11 @@ def compare(reference_path: str | None, attempt_path: str | None, transcript: st
         f"**Active audio-level delta:** {metrics['relative_energy_db']:+.1f} dB\n\n"
         f"**Experimental similarity index:** {result['deviation_index']}/100 "
         "(hand-chosen penalty scale, **not** speech quality or confidence).\n\n"
+        + (f"\n\n**Reference-relative rubric (0–100):** Pause {rubric[\x27scores\x27][\x27pause\x27]}, "
+           f"Pace {rubric[\x27scores\x27][\x27relative_pace\x27]}, "
+           f"Recording level {rubric[\x27scores\x27][\x27recording_level\x27]}. "
+           f"**Weighted similarity: {rubric[\x27combined_reference_similarity\x27]}/100.** "
+           "Higher means closer to this one reference, **not** better public speaking.")
         + ("*Transcript supplied for documentation only; no word-level forced alignment is performed.*"
            if transcript else "*No transcript supplied. Compare recordings of the same words for meaningful results.*")
     )
@@ -107,6 +114,7 @@ def compare(reference_path: str | None, attempt_path: str | None, transcript: st
         "index_not_a_quality_score": result["deviation_index"],
         "metrics": metrics,
         "events": events,
+        "reference_relative_rubric": rubric,
         "method": "RMS and YIN pitch features, MFCC dynamic time warping, deterministic comparison thresholds",
         "limitations": [
             "Not a trained speech-quality model or assessment of persuasion",
@@ -165,8 +173,11 @@ def build_app() -> gr.Blocks:
                 [str(EXAMPLES_DIR / "reference" / "ideal.wav"), str(EXAMPLES_DIR / "flawed" / "extra_pause.wav"), TRANSCRIPT],
                 [str(EXAMPLES_DIR / "reference" / "ideal.wav"), str(EXAMPLES_DIR / "flawed" / "rushed.wav"), TRANSCRIPT],
                 [str(EXAMPLES_DIR / "reference" / "ideal.wav"), str(EXAMPLES_DIR / "flawed" / "quiet.wav"), TRANSCRIPT],
+                *[[str(EXAMPLES_DIR / "reference" / "ideal.wav"), str(EXAMPLES_DIR / "spectrum" / f"{name}.wav"), TRANSCRIPT] for name in ("pause_045","pause_085","pause_140","gain_085","gain_060","gain_040")],
             ],
-            example_labels=["Inserted long pause", "Faster delivery", "Lower audio level"],
+            example_labels=["Inserted long pause", "Faster delivery", "Lower audio level",
+                            "Subtle pause (+0.45s)", "Medium pause (+0.85s)", "Strong pause (+1.40s)",
+                            "Subtle level change", "Medium level change", "Strong level change"],
             inputs=[reference, attempt, transcript],
             label="Controlled demo recordings (synthetic eSpeak voice, not a human speech)",
         )

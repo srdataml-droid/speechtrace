@@ -151,6 +151,11 @@ def build_app() -> gr.Blocks:
                     attempt_audio=gr.Audio(label='Rehearsal (under 40 seconds)',
                         value=str(ROOT/'data/flawed/extra_pause.wav'),sources=['upload','microphone'],type='filepath',format='wav')
                 pair_transcript=gr.Textbox(label='Shared words (optional)',value=EXAMPLE_TRANSCRIPT,lines=2)
+                gr.Examples(examples=[
+                    [str(ROOT/'data/reference/ideal.wav'), str(ROOT/'data/spectrum'/f'{case}.wav'), EXAMPLE_TRANSCRIPT]
+                    for case in ('pause_045','pause_085','pause_140','gain_085','gain_060','gain_040')
+                ], inputs=[ref_audio,attempt_audio,pair_transcript],
+                   label='Controlled stress-spectrum examples (synthetic; same words)')
                 pair_button=gr.Button('Compare matched recordings',variant='primary')
                 pair_summary=gr.Markdown()
                 pair_plot=gr.Plot(label='Reference-relative energy and pitch curves')

@@ -109,3 +109,7 @@ This software was drafted with AI assistance and must be verified by the maintai
 The controlled synthetic dataset now includes six graded cases and the three original cases. [Open the spectrum manifest](data/spectrum/manifest.json), [see the reproducibility guide](docs/TRACK_C_STRESS_SPECTRUM.md), and run `python scripts/evaluate_stress_spectrum.py` for case-by-case detections and timestamp overlap. These synthetic results are **not** evidence of real-speaker scoring accuracy. AI-assisted additions are disclosed in the guide.
 
 **Mobile rehearsal studio:** https://speechtrace-mobile-lab.vercel.app/ — separate from the Gradio reference-versus-candidate analysis required for Track C.
+
+## Experimental reference-relative rubric
+
+Track C comparison now includes explicitly defined pause, relative-pace and recorded-level similarity components (45/35/20 weighting) in its Gradio report. These coefficients are hand-chosen, **not a validated quality rating**. [Formula and limitations](docs/TRACK_C_RUBRIC.md). More graded examples are available in the comparison tab of `python app.py` and `python legacy_comparison.py`.
