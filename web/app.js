@@ -15,7 +15,7 @@ async function startRecording(){
  try{
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});
   const options=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported(t));
-  recorder=new MediaRecorder(stream,options?{mimeType:options,audioBitsPerSecond:48000}:{});chunks=[];wordTimes=[];report=null;audioBlob=null;$('report').classList.add('hidden');$('transcript').value='';$('provider').textContent='Not transcribed yet';$('notice').classList.add('hidden');$('playback').classList.add('hidden');$('review').disabled=true;$('retry').disabled=true;
+  recorder=new MediaRecorder(stream,options?{mimeType:options,audioBitsPerSecond:48000}:{});chunks=[];wordTimes=[];report=null;audioBlob=null;$('report').classList.add('hidden');$('transcript').value='';$('provider').textContent='Not transcribed yet';$('notice').classList.add('hidden');$('playback').classList.add('hidden');$('review').disabled=true;$('retry').disabled=true;$('coachAgain').disabled=true;
   recorder.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data)};
   recorder.onerror=()=>status('Recording error. Please retry; microphone access is required.','error');
   recorder.onstop=()=>{
@@ -82,14 +82,15 @@ async function run(){
  busy=true;$('run').disabled=true;$('retry').disabled=true;$('review').disabled=true;let transcript=$('transcript').value.trim(),words=[];const voiceConsent=$('voiceConsent').checked,coachConsent=$('coachConsent').checked;report={};
  try{
   phase('Analyzing your vocal delivery','Measuring silence and relative energy from the original audio on this device.');
-  acoustic=await captureAcoustics();if(acoustic.duration_s<2||acoustic.duration_s>305)throw Error('Please record between 2 seconds and 5 minutes.');
+  const acousticTask=captureAcoustics();
+  if(audioBlob.size>3800000)message('Long recording: the free API has a 3.8 MB upload limit; local audio analysis still works.',true);
   if(!voiceConsent&&!transcript)message('Only audio evidence is available. Tick recording consent for a transcript, or add the words manually.');
-  if(voiceConsent){
+  if(voiceConsent&&!transcript){
    if(audioBlob.size>3800000){message('Audio is too large for the free-tier upload. Local energy and pause analysis will still run.',true);}
    else{
     phase('Transcribing with open-weight Whisper','Free-tier inference in progress; your recording remains saved.');
     try{
-     const response=await fetchWithTimeout('/api/transcribe',{method:'POST',headers:{...headers(),'Content-Type':contentType()},body:audioBlob},55000);
+     const response=await fetchWithTimeout('/api/transcribe',{method:'POST',headers:{...headers(),'Content-Type':contentType(),'x-speechtrace-timing':$('timingMode').value},body:audioBlob},55000);
      const d=await response.json().catch(()=>({error:'Speech service returned an invalid response.'}));
      if(!response.ok)throw Error(d.error||'Transcription failed.');
      transcript=String(d.transcript||'').trim();
@@ -102,7 +103,9 @@ async function run(){
      transcript=$('transcript').value.trim();wordTimes=[];$('provider').textContent='Transcript unavailable';
     }
    }
-  }else{lastTranscript=transcript;wordTimes=[];$('provider').textContent=transcript?'Manual transcript':'Audio evidence only';}
+  }else{if(transcript!==lastTranscript)wordTimes=[];lastTranscript=transcript;$('provider').textContent=transcript?'Verified/edited transcript':'Audio evidence only';}
+  acoustic=await acousticTask;
+  if(acoustic.duration_s<2||acoustic.duration_s>305)throw Error('Please record between 2 seconds and 5 minutes.');
   phase('Mapping delivery evidence','Aligning words, potential hesitation terms, quiet intervals and local fast stretches.');
   const evidence=displayEvidence(transcript,wordTimes);
   report={version:'0.9',transcript,words:wordTimes,evidence,goal:$('goal').value,observed_at:new Date().toISOString()};
@@ -120,9 +123,9 @@ async function run(){
    }
   }else{$('coachStatus').classList.remove('error');$('coachStatus').textContent=coachConsent?'Provide a transcript to request AI feedback.':'AI coaching not requested. Tick the second consent box to receive model-generated coaching.';}
   status('Review ready. Tap highlighted words or pause markers to replay them.');$('report').scrollIntoView({behavior:'smooth',block:'start'});
- }catch(e){message((e.name==='AbortError'?'Processing timed out. Please retry.':e.message||'An error occurred.'),true);status('Your recording is still available to replay and save.','error');if(acoustic&&transcript){const evidence=displayEvidence(transcript,wordTimes);report={version:'0.9',transcript,words:wordTimes,evidence};$('v1').textContent=lightCleanup(transcript);$('coachStatus').textContent='Partial report: API processing did not complete.';}}finally{busy=false;endPhase();$('run').disabled=!audioBlob;$('retry').disabled=!audioBlob;$('review').disabled=!acoustic;}
+ }catch(e){message((e.name==='AbortError'?'Processing timed out. Please retry.':e.message||'An error occurred.'),true);status('Your recording is still available to replay and save.','error');if(acoustic&&transcript){const evidence=displayEvidence(transcript,wordTimes);report={version:'0.9',transcript,words:wordTimes,evidence};$('v1').textContent=lightCleanup(transcript);$('coachStatus').textContent='Partial report: API processing did not complete.';}}finally{busy=false;endPhase();$('run').disabled=!audioBlob;$('retry').disabled=!audioBlob;$('review').disabled=!acoustic;$('coachAgain').disabled=!acoustic;}
 }
-$('run').onclick=run;$('retry').onclick=run;
+$('run').onclick=run;$('retry').onclick=()=>{$('transcript').value='';wordTimes=[];run();};$('coachAgain').onclick=run;
 $('transcript').addEventListener('input',()=>{if(!report?.evidence)return;delete report.coaching;$('coachCards').innerHTML='';$('v2').textContent='Transcript changed. Refresh the evidence and request new coaching for this text.';$('coachStatus').textContent='Earlier AI advice was cleared because you edited the transcript.';});
 $('review').onclick=()=>{if(!acoustic)return;const changed=$('transcript').value.trim()!==lastTranscript;const s=$('transcript').value.trim();const e=displayEvidence(s,changed?[]:wordTimes);if(changed){message('You edited the transcript. Word timings are now hidden because they may no longer align with your recording.');}report={...report,transcript:s,words:changed?[]:wordTimes,evidence:e};delete report.coaching;$('coachCards').innerHTML='';$('v1').textContent=lightCleanup(s);};
 $('download').onclick=()=>{if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='speechtrace-evidence.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),900);};
