@@ -18,12 +18,12 @@ export default async function handler(req,res){
  if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});
  if(!checkAccess(req,res))return;
  const key=process.env.GROQ_API_KEY;
- if(!key)return send(res,503,{error:'Connect your free Groq API key (GROQ_API_KEY) to enable Llama coaching.',code:'KEY_MISSING'});
+ if(!key)return send(res,503,{error:'Connect your free Groq API key (GROQ_API_KEY) to enable Qwen coaching.',code:'KEY_MISSING'});
  const raw=req.body||{},transcript=String(raw.transcript||'').slice(0,13000).trim();
  if(!transcript)return send(res,422,{error:'A transcript is required before AI coaching.'});
  const duration=Math.max(0,Math.min(360,Number(raw.duration_s)||0));
  const payload={goal:String(raw.goal||'Rehearsal').slice(0,250),transcript,words:Array.isArray(raw.words)?raw.words.slice(0,1400):[],acoustics:raw.acoustics&&typeof raw.acoustics==='object'?raw.acoustics:{},duration_s:duration};
- const model=process.env.GROQ_COACH_MODEL||'llama-3.1-8b-instant';
+ const model=process.env.GROQ_COACH_MODEL||'qwen/qwen3.8-27b';
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
  try{
   const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',signal:controller.signal,headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({model,temperature:0.2,max_completion_tokens:1800,response_format:{type:'json_object'},messages:[{role:'system',content:prompt},{role:'user',content:JSON.stringify(payload)}]})});
