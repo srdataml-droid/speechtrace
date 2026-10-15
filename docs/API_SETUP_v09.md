@@ -5,10 +5,10 @@ The deployed model pipeline uses open-weight models: **Whisper Large V3 Turbo** 
 ## Connect
 1. Create a Groq Free Plan account: https://console.groq.com/keys
 2. Create a key and add **grok_api** (or **grok_api or GROQ_API_KEY**) under Vercel project **speechtrace-mobile-lab** → Settings → Environment Variables → Production.
-3. Add **SPEECHTRACE_ACCESS_CODE** with a private password for approved testers. The server refuses to spend quota without this gate.
+3. No judge access code is required. The public app protects the Groq secret in Vercel, applies a best-effort per-instance request limit, and relies on Groq quota. For wider public use add a durable distributed limiter before launch.
 4. Optionally set **GROQ_ASR_MODEL=whisper-large-v3-turbo** and **GROQ_COACH_MODEL=qwen/qwen3.8-27b**.
 5. Redeploy to production and reload https://speechtrace-mobile-lab.vercel.app/.
-6. Enter your tester code on the site; record, replay, tick the separate voice/coach consents, and analyze.
+6. Open the link directly as a judge, record, replay, tick the voice/coach consents, and analyze.
 
 Never place API keys in frontend JavaScript, GitHub, messages, screenshots or browser localStorage. The optional access code is not an API key.
 
@@ -26,3 +26,5 @@ If the free API is rate-limited or unreachable, the recorded voice and local amp
 - Existing original Python Track C recording comparison is preserved in the repository.
 
 For fully self-hosted operation, run faster-whisper and an open model through Ollama with a separate always-on backend. CPU-only laptops can be slow and an offline machine cannot serve mobile users globally.
+## Credential handling (October 2026)
+The Groq secret is configured as `grok_api` in Vercel Production. Because a credential was pasted into a chat, rotate it in the Groq dashboard and update Vercel with the replacement. Do not put a secret into GitHub, browser localStorage, screenshots, or the app UI. The demo is publicly usable with no tester passcode; its in-memory per-instance request limiter is not sufficient security at scale. Set a hard usage budget with your provider and add distributed rate limiting before a broad launch.
