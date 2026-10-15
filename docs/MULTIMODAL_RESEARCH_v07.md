@@ -1,5 +1,7 @@
 # SpeechTrace — Multimodal models, datasets, training and roadmap
 
+> **Updated October 2026:** The original research below is preserved as a research plan, but current infrastructure uses free-tier Groq-hosted open-weight Whisper and Qwen models. For setup see [API_SETUP_v09.md](API_SETUP_v09.md). Tests are mocked unless explicitly stated. No training or validation study has been completed.
+
 ## Why this is genuinely multimodal
 The original recording retains time-varying acoustic information; the transcript contains linguistic information; timed words bridge these modalities. The coaching model interprets both the measured events and words, not just a transcript. The initial coach is text-only on a structured fusion report and cannot hear vocal tone directly; direct audio-understanding models are future comparison targets.
 
@@ -10,12 +12,15 @@ The original recording retains time-varying acoustic information; the transcript
 - AI coach: summary, strengths, moment-by-moment suggestions, light cleanup, stronger example pitch, practice steps.
 - Evaluation result: human-verified transcript, filler annotations, delivery observations, expert ratings (when consented), API response timing.
 
-## Models/APIs (current)
-1. Nova-3 for ASR and word timestamps; no local checkpoint download required.
-2. Device signal analysis for energy and low-volume pauses; these are observations, not an AI emotion model.
-3. `gpt-4.1-mini` for grounded coaching using the OpenAI Responses API and JSON Schema outputs.
-4. Optional comparison candidate: OpenAI GPT-4o Mini Transcribe for word-error-rate/latency benchmarking.
-5. Future: stream ASR, pitch contours using parselmouth/Praat, VAD, sentence-level delivery alignment, direct audio-language model for richer acoustic interpretation, document-grounded pitch preparation.
+## Models/APIs (current, free-tier first)
+1. **Whisper Large V3 Turbo** through the Groq Free Plan for English transcription. Choose **Fast** segment timestamps for lower latency or **Detailed** word timestamps for clickable phrase replay; Groq documents extra latency for word timestamps.
+2. **Browser acoustic measurements** (RMS loudness relative to this recording and possible quiet intervals) run locally in parallel with transcription. This is **not an emotion-detection model**. High energy cannot prove enthusiasm or confidence.
+3. **Qwen 3.8 27B** through the same Groq key for text-and-evidence-grounded coaching and optional Version 1 / Version 2 rewrites. The model receives transcript and measured timing/energy summaries, **not raw audio**.
+4. **No OpenAI API or other paid API required.** Groq is a hosted provider of open-weight models with a free tier and quota limits, not a fully self-hosted open-source API.
+5. **Future comparison candidates:** locally hosted faster-whisper, open-weight direct-audio language models, VAD, pitch contours using parselmouth/Praat, sentence-level delivery alignment, and document-grounded pitch preparation.
+
+### Current session data and outputs
+The session currently exists only in the browser during the rehearsal. A production session ID, database, account system, or long-term user history **has not been built**. The report can be exported as JSON, and raw audio remains on the device while the page is open. Timed words are approximate when requested; manual edits invalidate direct timing alignment. Do not label a heuristic as an emotion observation.
 
 ## Data sources to investigate, not automatically combine into training
 - **SpeechCraft**: expressive English/Chinese speech labels including pitch, energy, speed and emphasis, with distinct underlying corpora and licenses. Helpful for acoustic-description research; not a validated public-speaking-quality score. https://github.com/thuhcsi/SpeechCraft
@@ -42,13 +47,13 @@ Do not use speaker identity features to grade or infer intelligence or confidenc
 - Privacy: consent split by provider, no leaked secrets, clear retention and deletion documentation, API abuse safeguards.
 
 ## Prioritized roadmap
-P0: Get two API keys connected, prove on a real Android recording, monitor API response and cost.
-P1: Improve transcript correction + recalc word evidence, voice waveform replay markers, recording limit + errors; exact filler recall testing.
-P2: Add measured pitch variation and overlong-pause classifier; calibrate individual baseline and noisy environment.
+P0: Configure one Groq Free Plan key plus a private tester access code; prove a 30–90 second recording end-to-end on a real phone and laptop, measuring real elapsed time and transcription fidelity.
+P1: Offer Fast vs Detailed transcription; support transcript correction without re-uploading audio; re-run the coach only on verified text; add consistent retry/error messages and prevent stale timing/feedback. Benchmark 30-sec, 3-min and 5-min recordings.
+P2: Add voice-activity detection, measured pitch contour and locally calibrated pause patterns. Validate on actual recordings. Never infer emotional state from energy alone.
 P3: Allow optional PDF/PPTX and pitch notes for grounding. Report missing/covered points with source citations to each slide.
 P4: Collect consented corpus, tune thresholds, human evaluation, measure relative to common speaker-coaching tools.
 P5: Stream partial words, prompt at appropriate moments without interrupting rehearsals; optional spoken coaching responses.
-P6: Add SpeechTrace API and MCP to third-party assistants; authenticate, meter and bill usage.
+P6: Add a SpeechTrace API and MCP integration for third-party assistants, with authentication, user consent, metering and rate limits; decide on billing only after genuine product validation.
 
 ## Do not claim
 - 'We fine-tuned a model' if we have not done so.
