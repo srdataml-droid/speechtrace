@@ -11,10 +11,23 @@ test('quota-backed model requires a tester code',async()=>{const a=setting('GROQ
 test('wrong tester code is rejected',async()=>{const a=setting('GROQ_API_KEY','dummy'),b=setting('SPEECHTRACE_ACCESS_CODE','correct'),r=res();await transcribe(req('POST',Buffer.alloc(900),{'content-type':'audio/webm','x-speechtrace-code':'wrong'}),r);assert.equal(r.statusCode,401);a();b();});
 test('multipart Whisper request normalizes word and segment timing',async()=>{const a=setting('GROQ_API_KEY','dummy'),b=setting('SPEECHTRACE_ACCESS_CODE','secret'),old=globalThis.fetch;
 try{globalThis.fetch=async(url,opts)=>{assert.match(url,/api.groq.com\/openai\/v1\/audio\/transcriptions/);assert.equal(opts.headers.Authorization,'Bearer dummy');assert.equal(opts.body.get('model'),'whisper-large-v3-turbo');assert.deepEqual(opts.body.getAll('timestamp_granularities[]'),['word','segment']);return {ok:true,json:async()=>({text:'Um, this helps students.',duration:2,words:[{word:'Um,',start:.1,end:.4}],segments:[{start:0,end:2,text:'Um, this helps students.'}]})};};
-const r=res();await transcribe(req('POST',Buffer.alloc(1000),{'content-type':'audio/webm','x-speechtrace-code':'secret'}),r);assert.equal(r.statusCode,200);assert.equal(r.payload.words[0].start,.1);assert.equal(r.payload.provider,'groq');}finally{globalThis.fetch=old;a();b();}});
+const r=res();await transcribe(req('POST',Buffer.alloc(1000),{'content-type':'audio/webm','x-speechtrace-code':'secret','x-speechtrace-timing':'detailed'}),r);assert.equal(r.statusCode,200);assert.equal(r.payload.words[0].start,.1);assert.equal(r.payload.provider,'groq');}finally{globalThis.fetch=old;a();b();}});
 test('free Whisper quota failure returns 429',async()=>{const a=setting('GROQ_API_KEY','dummy'),b=setting('SPEECHTRACE_ACCESS_CODE','secret'),old=globalThis.fetch;
 try{globalThis.fetch=async()=>({ok:false,status:429,json:async()=>({})});const r=res();await transcribe(req('POST',Buffer.alloc(1000),{'content-type':'audio/webm','x-speechtrace-code':'secret'}),r);assert.equal(r.statusCode,429);assert.equal(r.payload.code,'FREE_TIER_LIMIT');}finally{globalThis.fetch=old;a();b();}});
-test('Llama JSON coaching validates quote and uses actual word timing instead of invented time',async()=>{const a=setting('GROQ_API_KEY','dummy'),b=setting('SPEECHTRACE_ACCESS_CODE','secret'),old=globalThis.fetch;
+test('Qwen JSON coaching validates quote and uses actual word timing instead of invented time',async()=>{const a=setting('GROQ_API_KEY','dummy'),b=setting('SPEECHTRACE_ACCESS_CODE','secret'),old=globalThis.fetch;
 try{globalThis.fetch=async(url,opts)=>{assert.match(url,/api.groq.com\/openai\/v1\/chat\/completions/);const body=JSON.parse(opts.body);assert.equal(body.model,'qwen/qwen3.8-27b');assert.equal(body.response_format.type,'json_object');return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify({summary:'Good opening',moments:[{quote:'our pitch',observation:'Clear',suggestion:'Add an example',start_s:99,end_s:100,evidence:'transcript'}],version1:'Our pitch works.',version2:'Our pitch solves this problem.',practice_steps:[],strengths:['Direct']})}}]})};};const r=res();await coach(req('POST',{transcript:'Our pitch works.',duration_s:3,words:[{word:'Our',start:.2,end:.4},{word:'pitch',start:.41,end:.61},{word:'works',start:.62,end:1}]},{'x-speechtrace-code':'secret'}),r);assert.equal(r.statusCode,200);assert.equal(r.payload.moments[0].start_s,.2);assert.equal(r.payload.version2,'Our pitch solves this problem.');}finally{globalThis.fetch=old;a();b();}});
 test('no Groq key cannot generate coach response',async()=>{const a=setting('GROQ_API_KEY',undefined),r=res();await coach(req('POST',{transcript:'our demo'}),r);assert.equal(r.payload.code,'KEY_MISSING');a();});
 test('status never exposes a secret key',()=>{const a=setting('GROQ_API_KEY','secret-xyz'),r=res();status(req('GET'),r);assert.equal(JSON.stringify(r.payload).includes('secret-xyz'),false);a();});
+
+test('fast transcription avoids extra word alignment request',async()=>{
+ const a=setting('GROQ_API_KEY','dummy'),b=setting('SPEECHTRACE_ACCESS_CODE','secret'),oldFetch=globalThis.fetch;
+ try {
+  globalThis.fetch=async(url,opts)=>{
+   assert.deepEqual(opts.body.getAll('timestamp_granularities[]'),['segment']);
+   return {ok:true,json:async()=>({text:'Hello judges, here is the problem.',duration:3,segments:[{start:0,end:3,text:'Hello judges, here is the problem.'}]})};
+  };
+  const r=res();await transcribe(req('POST',Buffer.alloc(1000),{'content-type':'audio/webm','x-speechtrace-code':'secret'}),r);
+  assert.equal(r.statusCode,200);assert.equal(r.payload.timing_mode,'fast');
+  assert.deepEqual(r.payload.words,[]);
+ } finally{globalThis.fetch=oldFetch;a();b();}
+});
