@@ -1,11 +1,11 @@
-import {checkAccess,readRaw,send} from '../lib/shared.js';
+import {checkAccess,readRaw,send,getGroqKey} from '../lib/shared.js';
 export const config={api:{bodyParser:false}};
 const extensions={'audio/webm':'webm','audio/ogg':'ogg','audio/mp4':'m4a','audio/mpeg':'mp3','audio/wav':'wav','audio/x-wav':'wav','audio/aac':'aac'};
 export default async function handler(req,res){
  if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});
  if(!checkAccess(req,res))return;
- const key=process.env.GROQ_API_KEY;
- if(!key)return send(res,503,{error:'Connect your free Groq API key (GROQ_API_KEY) in Vercel and redeploy.',code:'KEY_MISSING'});
+ const key=getGroqKey();
+ if(!key)return send(res,503,{error:'Connect a Groq API key with Vercel variable grok_api (or GROQ_API_KEY) and redeploy.',code:'KEY_MISSING'});
  const type=String(req.headers['content-type']||'').split(';')[0].trim().toLowerCase();
  if(!extensions[type])return send(res,415,{error:'Audio format unsupported. Please record in Chrome.'});
  let audio;try{audio=await readRaw(req);}catch(e){return send(res,e.status||400,{error:e.message});}
