@@ -90,14 +90,14 @@ async function run(){
    const response=await fetchWithTimeout('/api/transcribe',{method:'POST',headers:{...headers(),'Content-Type':contentType()},body:audioBlob},55000);
    const d=await response.json().catch(()=>({error:'Speech service returned an invalid response.'}));
    if(!response.ok)throw Error(d.error||'Transcription failed.');
-   transcript=d.transcript||'';wordTimes=d.words||[];lastTranscript=transcript;$('transcript').value=transcript;$('provider').textContent='Nova-3 · '+Math.round(d.transcription_ms/1000)+'s';
+   transcript=d.transcript||'';wordTimes=d.words||[];lastTranscript=transcript;$('transcript').value=transcript;$('provider').textContent='Whisper turbo · '+Math.round(d.transcription_ms/1000)+'s';
    message('Transcript ready. These are approximate word timings. Please correct any misheard words or missing ums/uhs.');
   }else{lastTranscript=transcript;wordTimes=[];$('provider').textContent='Manual transcript';}
   phase('Mapping delivery evidence','Aligning words, potential hesitation terms, quiet intervals and local fast stretches.');
   const evidence=displayEvidence(transcript,wordTimes);
   report={version:'0.7',transcript,words:wordTimes,evidence,goal:$('goal').value,observed_at:new Date().toISOString()};
   $('v1').textContent=lightCleanup(transcript)||'Transcript required.';
-  $('v2').textContent='AI coaching requires separate consent and an OPENAI_API_KEY in Vercel.';
+  $('v2').textContent='AI coaching needs the Groq open-weight model and your separate consent.';
   $('coachCards').innerHTML='';
   if(coachConsent&&transcript){
    phase('Preparing your AI coaching','The text model reviews speech structure, measured events and the meaning of your words.');
@@ -117,4 +117,4 @@ $('review').onclick=()=>{if(!acoustic)return;const changed=$('transcript').value
 $('download').onclick=()=>{if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='speechtrace-evidence.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),900);};
 $('copy').onclick=()=>{navigator.clipboard?.writeText($('v2').textContent||$('v1').textContent).then(()=>status('Pitch text copied.')).catch(()=>status('Select the revised pitch to copy it.'));};
 window.addEventListener('resize',()=>{if(acoustic)requestAnimationFrame(repaint);});
-fetch('/api/status').then(r=>r.json()).then(d=>{if(!d.fast_asr_configured)message('Fast transcription is waiting for a DEEPGRAM_API_KEY in Vercel. You can still record and replay audio.');else if(!d.ai_coach_configured)message('Fast transcription is configured, but AI coaching needs OPENAI_API_KEY.');if(d.access_code_required)$('access').placeholder='Ask your tester coordinator for the access code';}).catch(()=>message('Service status could not be checked. The recording feature still works.'));
+fetch('/api/status').then(r=>r.json()).then(d=>{if(!d.fast_asr_configured)message('Open-weight transcription requires the free Groq GROQ_API_KEY in Vercel. You can still record and replay audio.');else if(!d.ai_coach_configured)message('Fast transcription is configured, but AI coaching uses the same GROQ_API_KEY.');if(d.access_code_required)$('access').placeholder='Ask your tester coordinator for the access code';}).catch(()=>message('Service status could not be checked. The recording feature still works.'));
