@@ -1,3 +1,9 @@
+# Superseded setup instructions
+
+Use [API_SETUP_v09.md](API_SETUP_v09.md) for the current **Groq Free Plan + open-weight Whisper/Llama** configuration. The Deepgram/OpenAI instructions below apply to an earlier prototype and are no longer required.
+
+---
+
 # SpeechTrace v0.7 — Connect two AI APIs (phone only)
 
 ## Goal
