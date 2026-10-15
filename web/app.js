@@ -43,7 +43,7 @@ async function captureAcoustics(){
  const dur=decoded.duration,arr=[...frame].sort((a,b)=>a-b),max=arr[Math.floor(arr.length*.95)]||0,threshold=Math.max(0.002,max*.09),pauses=[];let opened=null;
  for(let i=0;i<=frame.length;i++){
   if(i<frame.length&&frame[i]<threshold&&opened===null)opened=i;
-  if((i===frame.length||frame[i]>=threshold)&&opened!==null){const start=opened*hop/sr,end=i*hop/sr;if(end-start>=0.5&&start>0.2&&end<dur-.2)pauses.push({start:+start.toFixed(2),end:+end.toFixed(2),length_s:+(end-start).toFixed(2)});opened=null;}
+  if((i===frame.length||frame[i]>=threshold)&&opened!==null){const start=opened*hop/sr,end=i*hop/sr;if(end-start>=1.0&&start>0.25&&end<dur-.25)pauses.push({start:+start.toFixed(2),end:+end.toFixed(2),length_s:+(end-start).toFixed(2)});opened=null;}
  }
  return {duration_s:dur,frames:frame,pauses,threshold,hop_s:hop/sr,reference_rms:max};
 }
@@ -67,7 +67,7 @@ function displayEvidence(transcript,words){
  let highlighted='';if(words?.length&&transcript===lastTranscript){highlighted=words.map(w=>{const cls=FILLER.has(markedToken(w.word))?'word filler':'word';return `<span class="${cls}" data-time="${Number(w.start)||0}" title="Replay ${Number(w.start).toFixed(1)}s">${html(w.word)} </span>`}).join('');}else{highlighted=html(transcript).replace(/\b(um+|uh+|erm+|er+|ah+|hmm+)\b/gi,s=>`<mark style="background:#7b572d;color:#ffe6a0;border-radius:4px">${s}</mark>`);}
  $('highlighted').innerHTML=highlighted||'<span class="muted">A transcript is needed for text analysis.</span>';
  $('highlighted').querySelectorAll('[data-time]').forEach(el=>el.onclick=()=>playAt(Number(el.dataset.time)));
- for(const p of acoustic.pauses.slice(0,8))ev.push({title:`Quiet interval · ${p.length_s}s`,note:'Low recorded energy; replay to decide whether the pause was useful.',start:p.start});
+ for(const p of acoustic.pauses.slice(0,5))ev.push({title:`Quiet interval · ${p.length_s}s`,note:'Candidate low-energy interval; replay before interpreting it. This is not a speaking mistake.',start:p.start});
  for(const b of bursts)ev.push({title:`Possible rushed stretch · ${b.wpm} WPM`,note:'Locally fast word timing. Replay for clarity; not necessarily an error.',start:b.start});
  if(count)ev.unshift({title:`${count} potential hesitation word(s)`,note:'These are based on the transcript, which may omit some fillers.',start:null});
  $('events').innerHTML=ev.length?ev.map(e=>`<div class="event"><h4>${html(e.title)}</h4><p>${html(e.note)}</p>${e.start===null?'':`<button class="seek" data-time="${e.start}">▶ ${secs(e.start)}</button>`}</div>`).join(''):'<p class="muted small">No basic flags found. This does not mean the presentation is perfect.</p>';
@@ -77,9 +77,41 @@ function displayEvidence(transcript,words){
 }
 function lightCleanup(s){return s.replace(/(^|[\s,])(um+|uh+|erm+|er+|ah+|hmm+)\b[\s,]*/gi,' ').replace(/\s+/g,' ').replace(/\s+([,.!?;:])/g,'$1').trim().replace(/^./,m=>m.toUpperCase());}
 function headers(){return {'x-speechtrace-code':$('access').value.trim()};}
+
+async function makeWavFallback(){
+ const C=window.AudioContext||window.webkitAudioContext,ctx=new C();let decoded;
+ try{decoded=await ctx.decodeAudioData(await audioBlob.arrayBuffer());}finally{await ctx.close();}
+ const sr=16000,samples=Math.round(decoded.duration*sr);
+ if(samples*2+44>3800000)throw Error('This recording is too long for WAV recovery. Save the audio and retry with a shorter section.');
+ const buffer=new ArrayBuffer(44+samples*2),view=new DataView(buffer);
+ const put=(offset,text)=>{for(let i=0;i<text.length;i++)view.setUint8(offset+i,text.charCodeAt(i))};
+ put(0,'RIFF');view.setUint32(4,36+samples*2,true);put(8,'WAVE');put(12,'fmt ');view.setUint32(16,16,true);
+ view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,sr,true);view.setUint32(28,sr*2,true);
+ view.setUint16(32,2,true);view.setUint16(34,16,true);put(36,'data');view.setUint32(40,samples*2,true);
+ const ch=Array.from({length:decoded.numberOfChannels},(_,i)=>decoded.getChannelData(i));
+ for(let i=0;i<samples;i++){const at=Math.min(decoded.length-1,i*decoded.sampleRate/sr),k=Math.floor(at),j=Math.min(k+1,decoded.length-1),t=at-k;
+  let value=0;for(const a of ch)value+=((a[k]*(1-t))+(a[j]*t))/ch.length;
+  const v=Math.max(-1,Math.min(1,value));view.setInt16(44+i*2,v<0?v*32768:v*32767,true);}
+ return new Blob([buffer],{type:'audio/wav'});
+}
+async function requestTranscript(payload,mime,mode){
+ const response=await fetchWithTimeout('/api/transcribe',{method:'POST',headers:{...headers(),'Content-Type':mime,'x-speechtrace-timing':mode},body:payload},55000);
+ const data=await response.json().catch(()=>({error:'The server returned unreadable data.',code:'BAD_RESPONSE'}));
+ if(!response.ok){const e=new Error(data.error||'Transcription failed.');e.code=data.code;e.http=response.status;throw e;}
+ return data;
+}
+async function checkConnection(){
+ const el=$('connectionResult');el.textContent='Checking the Groq API key and model access…';
+ try{const r=await fetchWithTimeout('/api/connection',{method:'GET',headers:headers()},16000);
+ const d=await r.json();el.textContent=(d.connected?'Connected. ':'Not connected. ')+(d.message||d.error||'No status returned.');
+ el.style.color=d.connected&&d.asr_available?'#94ebbe':'#ffbac0';
+ }catch(e){el.textContent='Connection test failed. '+(e.name==='AbortError'?'Timed out.':e.message);el.style.color='#ffbac0';}
+}
+$('checkConnection').onclick=checkConnection;
+
 async function run(){
  if(busy||!audioBlob)return;
- busy=true;$('run').disabled=true;$('retry').disabled=true;$('review').disabled=true;let transcript=$('transcript').value.trim(),words=[];const voiceConsent=$('voiceConsent').checked,coachConsent=$('coachConsent').checked;report={};
+ busy=true;$('run').disabled=true;$('retry').disabled=true;$('review').disabled=true;let transcriptionFailed=false;let transcript=$('transcript').value.trim(),words=[];const voiceConsent=$('voiceConsent').checked,coachConsent=$('coachConsent').checked;report={};
  try{
   phase('Analyzing your vocal delivery','Measuring silence and relative energy from the original audio on this device.');
   const acousticTask=captureAcoustics();
@@ -90,16 +122,23 @@ async function run(){
    else{
     phase('Transcribing with open-weight Whisper','Free-tier inference in progress; your recording remains saved.');
     try{
-     const response=await fetchWithTimeout('/api/transcribe',{method:'POST',headers:{...headers(),'Content-Type':contentType(),'x-speechtrace-timing':$('timingMode').value},body:audioBlob},55000);
-     const d=await response.json().catch(()=>({error:'Speech service returned an invalid response.'}));
-     if(!response.ok)throw Error(d.error||'Transcription failed.');
+     let d;
+     try{d=await requestTranscript(audioBlob,contentType(),$('timingMode').value);}
+     catch(firstError){
+      if(['AUDIO_REJECTED','BAD_AUDIO_REQUEST','AUDIO_FORMAT'].includes(firstError.code)){
+       phase('Trying a compatible WAV conversion','Converting locally to 16 kHz WAV and preserving your original audio.');
+       const wav=await makeWavFallback();
+       d=await requestTranscript(wav,'audio/wav','fast');
+       message('Your original recording format was rejected; the compatible WAV retry worked. Verify the transcript.');
+      }else throw firstError;
+     }
      transcript=String(d.transcript||'').trim();
      if(!transcript)throw Error('No speech recognized; try clearer audio.');
      wordTimes=Array.isArray(d.words)?d.words:[];lastTranscript=transcript;$('transcript').value=transcript;
      $('provider').textContent='Whisper turbo · '+(Number(d.transcription_ms||0)/1000).toFixed(1)+'s';
      message('Transcript ready. Check proper names and missing fillers before reviewing.');
     }catch(e){
-     message('Automatic transcription unavailable: '+(e.name==='AbortError'?'Timed out.':e.message)+ ' The recorded audio and pause analysis are still available.',true);
+     transcriptionFailed=true;message('Transcription failed'+(e.code?' ['+e.code+']':'')+': '+(e.name==='AbortError'?'Timed out.':e.message)+' Your original recording remains saved in this tab. Check AI connection, then Retry transcription; you do not need to record again.',true);
      transcript=$('transcript').value.trim();wordTimes=[];$('provider').textContent='Transcript unavailable';
     }
    }
@@ -122,7 +161,7 @@ async function run(){
     $('coachCards').querySelectorAll('[data-time]').forEach(el=>el.onclick=()=>playAt(Number(el.dataset.time)));
    }
   }else{$('coachStatus').classList.remove('error');$('coachStatus').textContent=coachConsent?'Provide a transcript to request AI feedback.':'AI coaching not requested. Tick the second consent box to receive model-generated coaching.';}
-  status('Review ready. Tap highlighted words or pause markers to replay them.');$('report').scrollIntoView({behavior:'smooth',block:'start'});
+  status(transcriptionFailed?'Audio-only review ready. Transcription failed; you can retry the same recording.':'Review ready. Tap highlighted words or pause markers to replay them.',transcriptionFailed?'error':'');$('report').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(e){message((e.name==='AbortError'?'Processing timed out. Please retry.':e.message||'An error occurred.'),true);status('Your recording is still available to replay and save.','error');if(acoustic&&transcript){const evidence=displayEvidence(transcript,wordTimes);report={version:'0.9',transcript,words:wordTimes,evidence};$('v1').textContent=lightCleanup(transcript);$('coachStatus').textContent='Partial report: API processing did not complete.';}}finally{busy=false;endPhase();$('run').disabled=!audioBlob;$('retry').disabled=!audioBlob;$('review').disabled=!acoustic;$('coachAgain').disabled=!acoustic;}
 }
 $('run').onclick=run;$('retry').onclick=()=>{$('transcript').value='';wordTimes=[];run();};$('coachAgain').onclick=run;
@@ -131,4 +170,4 @@ $('review').onclick=()=>{if(!acoustic)return;const changed=$('transcript').value
 $('download').onclick=()=>{if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='speechtrace-evidence.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),900);};
 $('copy').onclick=()=>{navigator.clipboard?.writeText($('v2').textContent||$('v1').textContent).then(()=>status('Pitch text copied.')).catch(()=>status('Select the revised pitch to copy it.'));};
 window.addEventListener('resize',()=>{if(acoustic)requestAnimationFrame(repaint);});
-fetch('/api/status').then(r=>r.json()).then(d=>{if(d.access_setup_required)message('Protect your free Groq quota: add SPEECHTRACE_ACCESS_CODE in Vercel first.',true);else if(!d.fast_asr_configured)message('Open-weight transcription requires the free Groq GROQ_API_KEY in Vercel. You can still record and replay audio.');else if(!d.ai_coach_configured)message('Fast transcription is configured, but AI coaching uses the same GROQ_API_KEY.');if(d.access_code_required)$('access').placeholder='Ask your tester coordinator for the access code';}).catch(()=>message('Service status could not be checked. The recording feature still works.'));
+fetch('/api/status').then(r=>r.json()).then(d=>{if(d.access_setup_required)message('Protect your free Groq quota: add SPEECHTRACE_ACCESS_CODE in Vercel first.',true);else if(!d.fast_asr_configured)message('Open-weight transcription requires the free Groq grok_api in Vercel. You can still record and replay audio.');else if(!d.ai_coach_configured)message('Fast transcription is configured, but AI coaching uses the same Groq key.');if(d.access_code_required)$('access').placeholder='Ask your tester coordinator for the access code';}).catch(()=>message('Service status could not be checked. The recording feature still works.'));
