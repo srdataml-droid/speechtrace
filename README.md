@@ -1,5 +1,7 @@
 # SpeechTrace — speech rehearsal studio & Track C acoustic comparison
 
+> **Latest mobile release: SpeechTrace v0.9, free open-weight models.** [Open the live studio](https://speechtrace-mobile-lab.vercel.app/) · [API setup](docs/API_SETUP_v09.md) · [Current research roadmap](docs/MULTIMODAL_RESEARCH_v07.md). The app uses Groq Free Plan-hosted Whisper Turbo and Qwen (one `GROQ_API_KEY`) with a required private tester access code. Free quotas apply. Live model-backed features will not work until the environment variables are configured. Fast transcription uses segment timestamps; Detailed mode enables slower word-level replay. No OpenAI paid API required. Track C comparison remains available in the Gradio tab.
+
 SpeechTrace helps someone practice a short speech with evidence-based feedback on relative energy, pauses, speaking rate, fillers, and alignment to provided presentation materials. The original Track C **same-text comparison** is preserved as a second Gradio tab.
 
 > **Status:** engineering prototype; tested with synthetic examples. No trained end-to-end speaking-quality classifier and no validated emotion, persuasive impact, fact checking or accent scoring. Inferences and suggestions must be checked by humans.
