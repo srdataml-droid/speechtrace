@@ -158,8 +158,8 @@ async function run(){
   if(coachConsent&&transcript){
    phase('Putting your feedback together','Finding ways to make your message clearer.');
    const resp=await fetchWithTimeout('/api/coach',{method:'POST',headers:{...headers(),'Content-Type':'application/json'},body:JSON.stringify({goal:$('goal').value,transcript,words:wordTimes.slice(0,1300),duration_s:evidence.duration_s,acoustics:evidence})},55000);
-   const out=await resp.json().catch(()=>({error:'We couldn't load your coaching suggestions.'}));
-   if(!resp.ok){$('coachStatus').textContent=out.error||'We couldn't load coaching suggestions. Your transcript and audio feedback remain available.';$('coachStatus').classList.add('error');report.coaching_error=out.error;}
+   const out=await resp.json().catch(()=>({error:"We couldn\u0027t load your coaching suggestions."}));
+   if(!resp.ok){$('coachStatus').textContent=out.error||"We couldn\u0027t load coaching suggestions. Your transcript and audio feedback remain available.";$('coachStatus').classList.add('error');report.coaching_error=out.error;}
    else{$('coachStatus').classList.remove('error');$('coachStatus').textContent=out.summary||'AI feedback ready';$('v1').textContent=out.version1||lightCleanup(transcript);$('v2').textContent=out.version2||'';report.coaching=out;
     $('coachCards').innerHTML=(out.moments||[]).slice(0,6).map(m=>`<div class="coach-card"><b>${html(m.quote||'Moment to review')}</b><p>${html(m.observation||'')}</p><p><strong>Try:</strong> ${html(m.suggestion||'')}</p>${typeof m.start_s==='number'?`<button class="seek" data-time="${m.start_s}">▶ ${secs(m.start_s)}</button>`:''}</div>`).join('');
     $('coachCards').querySelectorAll('[data-time]').forEach(el=>el.onclick=()=>playAt(Number(el.dataset.time)));
