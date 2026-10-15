@@ -89,7 +89,7 @@ function displayEvidence(transcript,words){
  return {duration_s:Math.round(n*100)/100,overall_wpm:total?rate:null,fillers:count,pauses:acoustic.pauses,fast_stretches:bursts,relative_energy_summary:{reference_rms:acoustic.reference_rms,method:'RMS amplitude sampled across original recording; not emotion or confidence'}};
 }
 function lightCleanup(s){return s.replace(/(^|[\s,])(um+|uh+|erm+|er+|ah+|hmm+)\b[\s,]*/gi,' ').replace(/\s+/g,' ').replace(/\s+([,.!?;:])/g,'$1').trim().replace(/^./,m=>m.toUpperCase());}
-function headers(){return {'x-speechtrace-code':$('access').value.trim()};}
+function headers(){return {};}
 
 async function makeWavFallback(){
  const C=window.AudioContext||window.webkitAudioContext,ctx=new C();let decoded;
@@ -183,4 +183,4 @@ $('review').onclick=()=>{if(!acoustic)return;const changed=$('transcript').value
 $('download').onclick=()=>{if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='speechtrace-evidence.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),900);};
 $('copy').onclick=()=>{navigator.clipboard?.writeText($('v2').textContent||$('v1').textContent).then(()=>status('Pitch text copied.')).catch(()=>status('Select the revised pitch to copy it.'));};
 window.addEventListener('resize',()=>{if(acoustic)requestAnimationFrame(repaint);});
-fetch('/api/status').then(r=>r.json()).then(d=>{if(d.access_setup_required)message('Protect your free Groq quota: add SPEECHTRACE_ACCESS_CODE in Vercel first.',true);else if(!d.fast_asr_configured)message('Open-weight transcription requires the free Groq grok_api in Vercel. You can still record and replay audio.');else if(!d.ai_coach_configured)message('Fast transcription is configured, but AI coaching uses the same Groq key.');if(d.access_code_required)$('access').placeholder='Ask your tester coordinator for the access code';}).catch(()=>message('Service status could not be checked. The recording feature still works.'));
+fetch('/api/status').then(r=>r.json()).then(d=>{if(!d.fast_asr_configured)message('Open-weight transcription requires the free Groq grok_api in Vercel. You can still record and replay audio.');else if(!d.ai_coach_configured)message('Fast transcription is configured, but AI coaching uses the same Groq key.');}).catch(()=>message('Service status could not be checked. The recording feature still works.'));
