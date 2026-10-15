@@ -32,6 +32,19 @@ async function startRecording(){
 }
 function finishRecording(){if(recorder?.state==='recording'){try{recorder.requestData();}catch{}recorder.stop();$('recordpad').classList.remove('recording');status('Finishing recording…');}}
 $('record').onclick=startRecording;$('stop').onclick=finishRecording;
+$('uploadFile').onchange=e=>{
+ const file=e.target.files?.[0];if(!file||busy||recorder?.state==='recording')return;
+ if(file.size<900){status('That file appears empty. Choose an audio recording.','error');return;}
+ if(file.size>3800000){message('Audio file is above the 3.8 MB speech-upload limit. You can still play it, but transcription needs a shorter/compressed file.',true);}
+ if(objectUrl)URL.revokeObjectURL(objectUrl);
+ audioBlob=file;objectUrl=URL.createObjectURL(file);wordTimes=[];lastTranscript='';acoustic=null;report=null;
+ $('transcript').value='';$('provider').textContent='Not transcribed yet';$('report').classList.add('hidden');
+ $('player').src=objectUrl;$('player').load();$('playback').classList.remove('hidden');
+ $('saveAudio').href=objectUrl;$('saveAudio').download=file.name||'speechtrace-saved-recording';
+ $('run').disabled=false;$('retry').disabled=true;$('review').disabled=true;$('coachAgain').disabled=true;
+ $('recordstate').textContent='Saved recording loaded';
+ status('Saved audio loaded. Replay it first, then tap Analyze. You do not need to record the same pitch again.');
+};
 $('play').onclick=async()=>{try{$('player').currentTime=0;await $('player').play();}catch{status('Audio did not play. Tap the built-in audio player or Save recording.','error');}};
 function playAt(n){try{$('player').currentTime=Math.max(0,n);$('player').play().catch(()=>status('Tap the audio player to start playback.'));}catch{}}
 async function captureAcoustics(){
