@@ -83,19 +83,29 @@ async function run(){
  try{
   phase('Analyzing your vocal delivery','Measuring silence and relative energy from the original audio on this device.');
   acoustic=await captureAcoustics();if(acoustic.duration_s<2||acoustic.duration_s>305)throw Error('Please record between 2 seconds and 5 minutes.');
-  if(!voiceConsent&&!transcript)throw Error('To get a transcript automatically, tick the recording-consent checkbox. You can also paste a manual transcript.');
+  if(!voiceConsent&&!transcript)message('Only audio evidence is available. Tick recording consent for a transcript, or add the words manually.');
   if(voiceConsent){
-   if(audioBlob.size>3_800_000)throw Error('Audio too large for the fast API. Please use a shorter recording.');
-   phase('Transcribing with the speech model','Uploading securely, then retrieving your words and approximate word timings.');
-   const response=await fetchWithTimeout('/api/transcribe',{method:'POST',headers:{...headers(),'Content-Type':contentType()},body:audioBlob},55000);
-   const d=await response.json().catch(()=>({error:'Speech service returned an invalid response.'}));
-   if(!response.ok)throw Error(d.error||'Transcription failed.');
-   transcript=d.transcript||'';wordTimes=d.words||[];lastTranscript=transcript;$('transcript').value=transcript;$('provider').textContent='Whisper turbo · '+Math.round(d.transcription_ms/1000)+'s';
-   message('Transcript ready. These are approximate word timings. Please correct any misheard words or missing ums/uhs.');
-  }else{lastTranscript=transcript;wordTimes=[];$('provider').textContent='Manual transcript';}
+   if(audioBlob.size>3800000){message('Audio is too large for the free-tier upload. Local energy and pause analysis will still run.',true);}
+   else{
+    phase('Transcribing with open-weight Whisper','Free-tier inference in progress; your recording remains saved.');
+    try{
+     const response=await fetchWithTimeout('/api/transcribe',{method:'POST',headers:{...headers(),'Content-Type':contentType()},body:audioBlob},55000);
+     const d=await response.json().catch(()=>({error:'Speech service returned an invalid response.'}));
+     if(!response.ok)throw Error(d.error||'Transcription failed.');
+     transcript=String(d.transcript||'').trim();
+     if(!transcript)throw Error('No speech recognized; try clearer audio.');
+     wordTimes=Array.isArray(d.words)?d.words:[];lastTranscript=transcript;$('transcript').value=transcript;
+     $('provider').textContent='Whisper turbo · '+(Number(d.transcription_ms||0)/1000).toFixed(1)+'s';
+     message('Transcript ready. Check proper names and missing fillers before reviewing.');
+    }catch(e){
+     message('Automatic transcription unavailable: '+(e.name==='AbortError'?'Timed out.':e.message)+ ' The recorded audio and pause analysis are still available.',true);
+     transcript=$('transcript').value.trim();wordTimes=[];$('provider').textContent='Transcript unavailable';
+    }
+   }
+  }else{lastTranscript=transcript;wordTimes=[];$('provider').textContent=transcript?'Manual transcript':'Audio evidence only';}
   phase('Mapping delivery evidence','Aligning words, potential hesitation terms, quiet intervals and local fast stretches.');
   const evidence=displayEvidence(transcript,wordTimes);
-  report={version:'0.7',transcript,words:wordTimes,evidence,goal:$('goal').value,observed_at:new Date().toISOString()};
+  report={version:'0.9',transcript,words:wordTimes,evidence,goal:$('goal').value,observed_at:new Date().toISOString()};
   $('v1').textContent=lightCleanup(transcript)||'Transcript required.';
   $('v2').textContent='AI coaching needs the Groq open-weight model and your separate consent.';
   $('coachCards').innerHTML='';
@@ -113,7 +123,8 @@ async function run(){
  }catch(e){message((e.name==='AbortError'?'Processing timed out. Please retry.':e.message||'An error occurred.'),true);status('Your recording is still available to replay and save.','error');if(acoustic&&transcript){const evidence=displayEvidence(transcript,wordTimes);report={version:'0.7',transcript,words:wordTimes,evidence};$('v1').textContent=lightCleanup(transcript);$('coachStatus').textContent='Partial report: API processing did not complete.';}}finally{busy=false;endPhase();$('run').disabled=!audioBlob;$('retry').disabled=!audioBlob;$('review').disabled=!acoustic;}
 }
 $('run').onclick=run;$('retry').onclick=run;
-$('review').onclick=()=>{if(!acoustic)return;const changed=$('transcript').value.trim()!==lastTranscript;const s=$('transcript').value.trim();const e=displayEvidence(s,changed?[]:wordTimes);if(changed){message('You edited the transcript. Word timings are now hidden because they may no longer align with your recording.');}report={...report,transcript:s,evidence:e};$('v1').textContent=lightCleanup(s);};
+$('transcript').addEventListener('input',()=>{if(!report?.evidence)return;delete report.coaching;$('coachCards').innerHTML='';$('v2').textContent='Transcript changed. Refresh the evidence and request new coaching for this text.';$('coachStatus').textContent='Earlier AI advice was cleared because you edited the transcript.';});
+$('review').onclick=()=>{if(!acoustic)return;const changed=$('transcript').value.trim()!==lastTranscript;const s=$('transcript').value.trim();const e=displayEvidence(s,changed?[]:wordTimes);if(changed){message('You edited the transcript. Word timings are now hidden because they may no longer align with your recording.');}report={...report,transcript:s,words:changed?[]:wordTimes,evidence:e};delete report.coaching;$('coachCards').innerHTML='';$('v1').textContent=lightCleanup(s);};
 $('download').onclick=()=>{if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='speechtrace-evidence.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),900);};
 $('copy').onclick=()=>{navigator.clipboard?.writeText($('v2').textContent||$('v1').textContent).then(()=>status('Pitch text copied.')).catch(()=>status('Select the revised pitch to copy it.'));};
 window.addEventListener('resize',()=>{if(acoustic)requestAnimationFrame(repaint);});
