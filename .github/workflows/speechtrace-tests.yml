@@ -1,0 +1,30 @@
+name: SpeechTrace tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'evaluation/**'
+      - '.github/workflows/speechtrace-tests.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'evaluation/**'
+
+jobs:
+  web-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check web/app.js
+      - run: node --check web/api/transcribe.js
+      - run: node --check web/api/coach.js
+      - run: npm test --prefix web
+      - name: Evaluation metrics sanity check
+        run: python3 evaluation/evaluate.py evaluation/illustrative_examples.jsonl
