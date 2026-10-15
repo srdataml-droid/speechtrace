@@ -4,7 +4,7 @@ The deployed model pipeline uses open-weight models: **Whisper Large V3 Turbo** 
 
 ## Connect
 1. Create a Groq Free Plan account: https://console.groq.com/keys
-2. Create a key and add **GROQ_API_KEY** under Vercel project **speechtrace-mobile-lab** → Settings → Environment Variables → Production.
+2. Create a key and add **grok_api** (or **grok_api or GROQ_API_KEY**) under Vercel project **speechtrace-mobile-lab** → Settings → Environment Variables → Production.
 3. Add **SPEECHTRACE_ACCESS_CODE** with a private password for approved testers. The server refuses to spend quota without this gate.
 4. Optionally set **GROQ_ASR_MODEL=whisper-large-v3-turbo** and **GROQ_COACH_MODEL=qwen/qwen3.8-27b**.
 5. Redeploy to production and reload https://speechtrace-mobile-lab.vercel.app/.
